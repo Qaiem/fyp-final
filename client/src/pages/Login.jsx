@@ -19,17 +19,42 @@ const Login = () => {
   const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
+  // Inside Login.jsx
+
   const handleLogin = async (data) => {
     try {
       const res = await login(data).unwrap();
+      
+      // 1. 🔍 DEBUG: Look at this log in your browser console!
+      console.log("👉 FULL LOGIN RESPONSE:", res); 
 
-      dispatch(setCredentials(res));
-      navigate("/");
+      // 2. Extract Token (Handle multiple common backend formats)
+      // Some backends send { token: "..." }, others { user: { token: "..." } }
+      const token = res?.token || res?.accessToken || res?.user?.token;
+      
+      // 3. Extract User Data
+      const user = res?.user || res;
+
+      if (token) {
+        // ✅ SAVE TOKEN SEPARATELY (Safest method)
+        localStorage.setItem("token", token);
+        
+        // ✅ SAVE USER INFO (Merge token in just in case apiSlice looks there)
+        localStorage.setItem("userInfo", JSON.stringify({ ...user, token }));
+        
+        dispatch(setCredentials(res));
+        navigate("/dashboard"); // Redirect to dashboard
+      } else {
+        console.error("❌ CRITICAL: Backend did not send a token!", res);
+        toast.error("Login failed: No access token received.");
+      }
+
     } catch (err) {
+      console.error(err);
       toast.error(err?.data?.message || err.error);
     }
   };
-
+  
   useEffect(() => {
     user && navigate("/dashboard");
   }, [user]);

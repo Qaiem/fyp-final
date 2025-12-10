@@ -1,9 +1,10 @@
-// routes/geminiRoutes.js
 import express from "express";
 import { predictDeadline } from "../controllers/geminiController.js";
+import { protectRoute } from "../middleware/authMiddleware.js"; 
 
 const router = express.Router();
 
-router.get("/analyze/:taskId", predictDeadline);
+// ✅ Ensure it uses POST and :taskId
+router.post("/analyze/:taskId", protectRoute, predictDeadline); 
 
 export default router;

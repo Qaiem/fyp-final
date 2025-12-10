@@ -51,8 +51,7 @@ const Dashboard = () => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }, []);
 
-  const totals = data?.tasks || [];
-  // console.log(task_dat)
+  const totals = data?.tasks || {}; // Default to object, not array
 
   if (isLoading)
     return (
@@ -65,13 +64,13 @@ const Dashboard = () => {
     {
       _id: "1",
       label: "TOTAL TASK",
-      total: totals["todo"],
+      total: totals["todo"] || 0, // Added fallback
       icon: <FaNewspaper />,
       bg: "bg-[#1d4ed8]",
     },
     {
       _id: "2",
-      label: "COMPLTED TASK",
+      label: "COMPLETED TASK", // Fixed typo "COMPLTED"
       total: totals["completed"] || 0,
       icon: <MdAdminPanelSettings />,
       bg: "bg-[#0f766e]",
@@ -86,9 +85,9 @@ const Dashboard = () => {
     {
       _id: "4",
       label: "TODOS",
-      total: totals["todo"],
+      total: totals["todo"] || 0, // Added fallback
       icon: <FaArrowsToDot />,
-      bg: "bg-[#be185d]" || 0,
+      bg: "bg-[#be185d]",
     },
   ];
 

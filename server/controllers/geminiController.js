@@ -1,119 +1,113 @@
-// import { predictDeadline as geminiPredict } from "../utils/GeminiPredict.js";
-// import Task from "../models/taskModel.js"; // Assuming you have a Task model
-
-// export const predictController = async (req, res) => {
-//   try {
-//     const { taskId } = req.body;
-//     if (!taskId) return res.status(400).json({ success: false, message: "Task ID missing" });
-
-//     // Fetch screenshots from DB
-//     const task = await Task.findById(taskId).select("screenshots");
-//     if (!task?.screenshots?.length)
-//       return res.status(400).json({ success: false, message: "No screenshots found" });
-
-//     // Convert Buffer to base64 (if stored as Buffer in DB)
-//     const screenshotsBase64 = task.screenshots.map((s) => {
-//       const buffer = s.data;
-//       const uint8Array = new Uint8Array(buffer.data);
-//       let binary = "";
-//       for (let i = 0; i < uint8Array.length; i++) {
-//         binary += String.fromCharCode(uint8Array[i]);
-//       }
-//       return `data:image/png;base64,${Buffer.from(binary, "binary").toString("base64")}`;
-//     });
-
-//     const prediction = await geminiPredict(screenshotsBase64, { taskId });
-
-//     res.json({ success: true, prediction });
-//   } catch (err) {
-//     console.error("Prediction Error:", err);
-//     res.status(500).json({ success: false, message: "Prediction failed" });
-//   }
-// };
-
-// import { predictDeadline as geminiPredict } from "../utils/GeminiPredict.js";
-// import Task from "../models/taskModel.js"; // Your Task model
-
-// export const predictController = async (req, res) => {
-//   try {
-//     console.log("✅ Predict endpoint hit");
-    
-//     const { taskId } = req.body;
-//     if (!taskId) {
-//       console.log("❌ No taskId in request body");
-//       return res.status(400).json({ success: false, message: "Task ID missing" });
-//     }
-//     console.log("Task ID:", taskId);
-
-//     // Fetch screenshots from DB
-//     const task = await Task.findById(taskId).select("screenshots");
-//     if (!task) {
-//       console.log("❌ Task not found");
-//       return res.status(404).json({ success: false, message: "Task not found" });
-//     }
-//     console.log("Task fetched from DB:", task);
-
-//     if (!task.screenshots?.length) {
-//       console.log("❌ No screenshots in task");
-//       return res.status(400).json({ success: false, message: "No screenshots found" });
-//     }
-
-//     // Convert buffers to base64
-//     const screenshotsBase64 = task.screenshots.map((s, index) => {
-//       try {
-//         const buffer = s.data;
-//         if (!buffer?.data) throw new Error("Invalid buffer data");
-//         const uint8Array = new Uint8Array(buffer.data);
-//         let binary = "";
-//         for (let i = 0; i < uint8Array.length; i++) {
-//           binary += String.fromCharCode(uint8Array[i]);
-//         }
-//         return `data:image/png;base64,${Buffer.from(binary, "binary").toString("base64")}`;
-//       } catch (err) {
-//         console.log(`❌ Error converting screenshot #${index}:`, err);
-//         return null;
-//       }
-//     }).filter(Boolean);
-
-//     console.log("Screenshots converted:", screenshotsBase64.length);
-
-//     // Call Gemini
-//     const prediction = await geminiPredict(screenshotsBase64, { taskId });
-//     console.log("Gemini prediction:", prediction);
-
-//     res.json({ success: true, prediction });
-//   } catch (err) {
-//     console.error("🔥 Prediction Error:", err);
-//     res.status(500).json({ success: false, message: "Prediction failed", error: err.message });
-//   }
-// };
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Task from "../models/taskModel.js";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+// Ensure API Key exists
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ GEMINI_API_KEY is missing in .env file");
+}
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export const predictDeadline = async (req, res) => {
-  const { taskId } = req.params;
-  console.log("Predicting deadline for task ID:", taskId);
-  const { title, description, stage, screenshots } = req.body;
+  try {
+    const { taskId } = req.params;
+    console.log(`🤖 Analyzing task: ${taskId}`);
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    // 1. Fetch Task Metadata & Screenshots from DB
+    const task = await Task.findById(taskId);
 
-  const prompt = `
-  Task title: ${title}
-  Description: ${description}
-  Current stage: ${stage}
-  Analyze screenshots and suggest the likely completion time and report progress.
-  `;
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
 
-  const result = await model.generateContent([
-    prompt,
-    ...screenshots.map((img) => ({
-      inlineData: { data: img.split(",")[1], mimeType: "image/png" },
-    })),
-  ]);
+    // 2. Process Screenshots (Convert Buffer to Base64)
+    let imageParts = [];
+    if (task.screenshots && task.screenshots.length > 0) {
+      imageParts = task.screenshots.map((s) => {
+        try {
+          // If s.data is a Buffer (standard for Mongo Binary), convert to base64
+          const base64Data = Buffer.from(s.data).toString("base64");
+          return {
+            inlineData: {
+              data: base64Data,
+              mimeType: s.contentType || "image/png",
+            },
+          };
+        } catch (err) {
+          console.error("Error converting screenshot:", err);
+          return null;
+        }
+      }).filter(Boolean); // Remove failed conversions
+    }
 
-  res.json({
-    report: result.response.text(),
-    deadline: "Estimated in 3 days (example)",
-  });
+    console.log(`📸 Found ${imageParts.length} screenshots for analysis.`);
+
+    // 3. Initialize Gemini Model (Use Flash for speed/availability)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // 4. Construct Prompt
+    const prompt = `
+      You are a Project Management AI.
+      
+      Task Details:
+      - Title: "${task.title}"
+      - Description: "${task.description || "No description provided."}"
+      - Current Stage: "${task.stage}"
+      - Priority: "${task.priority}"
+      
+      Instructions:
+      Analyze the attached screenshots (if any) which show the user's recent screen activity on this task.
+      Based on the task details and visual progress:
+      1. Estimate a realistic completion deadline (e.g., "2 days", "Today by 5 PM").
+      2. Write a brief progress report (max 2 sentences) describing what seems to be happening.
+      
+      Output exactly this JSON format:
+      {
+        "deadline": "string",
+        "report": "string"
+      }
+    `;
+
+    // 5. Call Gemini API
+    // Note: If no images, we just send the text prompt.
+    const contentParts = [prompt, ...imageParts];
+    const result = await model.generateContent(contentParts);
+    const response = await result.response;
+    const text = response.text();
+
+    // 6. Parse JSON Response
+    // Clean up markdown code blocks if Gemini adds them (e.g. ```json ... ```)
+    const cleanText = text.replace(/```json|```/g, "").trim();
+    
+    let prediction;
+    try {
+      prediction = JSON.parse(cleanText);
+    } catch (e) {
+      // Fallback if Gemini returns raw text instead of JSON
+      console.error("Failed to parse JSON, using raw text", text);
+      prediction = {
+        deadline: "See report",
+        report: text.substring(0, 100) + "..."
+      };
+    }
+
+    console.log("✅ Prediction success:", prediction);
+    res.status(200).json(prediction);
+
+  } catch (error) {
+    console.error("🔥 Gemini Prediction Error:", error);
+    
+    // Check for specific Google API errors
+    if (error.message?.includes("User location is not supported")) {
+        return res.status(403).json({ message: "Gemini API is not available in your server's region." });
+    }
+
+    res.status(500).json({ 
+        message: "AI Analysis failed.", 
+        error: error.message 
+    });
+  }
 };

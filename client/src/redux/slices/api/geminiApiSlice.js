@@ -1,16 +1,16 @@
-// redux/slices/api/geminiApiSlice.js
+import { Gemini_URL } from "../../../utils/contants";
 import { apiSlice } from "../apiSlice";
 
 export const geminiApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    predictDeadline: builder.query({
+    predictDeadline: builder.mutation({
       query: (taskId) => ({
-        url: `/gemini/analyze/${taskId}`,
-        method: "GET",
-        credentials: "include",
+        url: `${Gemini_URL}/analyze/${taskId}`, 
+        method: "POST",
       }),
     }),
   }),
 });
 
-export const { usePredictDeadlineQuery } = geminiApiSlice;
+// 👇 Add this line to export the generated hook
+export const { usePredictDeadlineMutation } = geminiApiSlice;

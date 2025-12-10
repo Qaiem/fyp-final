@@ -6,7 +6,6 @@ import {
   MdOutlinePendingActions,
   MdSettings,
   MdTaskAlt,
-  MdAccessTimeFilled,
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
@@ -55,11 +54,7 @@ const linkData = [
     link: "trashed",
     icon: <FaTrashAlt />,
   },
-  {
-    label: "Predict Deadline",
-    link: "predict/:id",
-    icon: <MdAccessTimeFilled />,
-  },
+  // ❌ REMOVED "Predict Deadline" from here because it requires a specific Task ID
 ];
 
 const Sidebar = () => {
@@ -97,7 +92,7 @@ const Sidebar = () => {
       label: propTypes.string.isRequired,
       link: propTypes.string.isRequired,
       icon: propTypes.element.isRequired,
-    }).isRequired,
+     }).isRequired,
   };
 
   return (
