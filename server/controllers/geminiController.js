@@ -14,7 +14,7 @@ if (process.env.GEMINI_API_KEY) {
 console.log("---------------------------------------------------");
 
 // Initialize globally, but we will check validity inside the request
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export const predictDeadline = async (req, res) => {
   try {
@@ -93,7 +93,15 @@ export const predictDeadline = async (req, res) => {
     const contentParts = [{ text: promptText }, ...imageParts];
 
     console.log("🚀 Sending request to Gemini...");
-    const result = await model.generateContent(contentParts);
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: contentParts,
+        },
+      ],
+    });
+
     const response = await result.response;
     const text = response.text();
 
