@@ -4,6 +4,74 @@ import User from "../models/userModel.js";
 import createJWT from "../utils/index.js";
 
 // POST request - login user
+// const loginUser = asyncHandler(async (req, res) => {
+//   const { email, password } = req.body;
+
+//   const user = await User.findOne({ email });
+
+//   if (!user) {
+//     return res
+//       .status(401)
+//       .json({ status: false, message: "Invalid email or password." });
+//   }
+
+//   if (!user?.isActive) {
+//     return res.status(401).json({
+//       status: false,
+//       message: "User account has been deactivated, contact the administrator",
+//     });
+//   }
+
+//   const isMatch = await user.matchPassword(password);
+
+//   if (user && isMatch) {
+//     createJWT(res, user._id);
+
+//     user.password = undefined;
+
+//     res.status(200).json(user);
+//   } else {
+//     return res
+//       .status(401)
+//       .json({ status: false, message: "Invalid email or password" });
+//   }
+// });
+
+// // POST - Register a new user
+// const registerUser = asyncHandler(async (req, res) => {
+//   const { name, email, password, isAdmin, role, title } = req.body;
+
+//   const userExists = await User.findOne({ email });
+
+//   if (userExists) {
+//     return res
+//       .status(400)
+//       .json({ status: false, message: "Email address already exists" });
+//   }
+
+//   const user = await User.create({
+//     name,
+//     email,
+//     password,
+//     isAdmin,
+//     role,
+//     title,
+//   });
+
+//   if (user) {
+//     isAdmin ? createJWT(res, user._id) : null;
+
+//     user.password = undefined;
+
+//     res.status(201).json(user);
+//   } else {
+//     return res
+//       .status(400)
+//       .json({ status: false, message: "Invalid user data" });
+//   }
+// });
+
+// POST request - login user
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -25,11 +93,14 @@ const loginUser = asyncHandler(async (req, res) => {
   const isMatch = await user.matchPassword(password);
 
   if (user && isMatch) {
-    createJWT(res, user._id);
+    // 1. Capture the token (Ensure createJWT returns it!)
+    const token = createJWT(res, user._id); 
 
     user.password = undefined;
 
-    res.status(200).json(user);
+    // 2. Send token combined with user data
+    // We use '...user._doc' to ensure we get the raw data + our new token field
+    res.status(200).json({ ...user._doc, token }); 
   } else {
     return res
       .status(401)
@@ -59,11 +130,13 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
-    isAdmin ? createJWT(res, user._id) : null;
+    // 1. Capture token if admin, else null
+    const token = isAdmin ? createJWT(res, user._id) : null;
 
     user.password = undefined;
 
-    res.status(201).json(user);
+    // 2. Send token in response
+    res.status(201).json({ ...user._doc, token });
   } else {
     return res
       .status(400)

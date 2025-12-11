@@ -4,17 +4,32 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Ensure API Key exists
-if (!process.env.GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY is missing in .env file");
+console.log("---------------------------------------------------");
+console.log("🔑 DEBUG CHECK:");
+if (process.env.GEMINI_API_KEY) {
+  console.log("✅ Key found: ", process.env.GEMINI_API_KEY.slice(0, 5) + "...");
+} else {
+  console.log("❌ CRITICAL: No API Key found in process.env!");
 }
+console.log("---------------------------------------------------");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize globally, but we will check validity inside the request
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export const predictDeadline = async (req, res) => {
   try {
     const { taskId } = req.params;
     console.log(`🤖 Analyzing task: ${taskId}`);
+
+    // 0. Security Check: Validate API Key
+    if (!process.env.GEMINI_API_KEY) {
+      console.error(
+        "❌ CRITICAL: GEMINI_API_KEY is missing from environment variables."
+      );
+      return res
+        .status(500)
+        .json({ message: "Server AI configuration error." });
+    }
 
     // 1. Fetch Task Metadata & Screenshots from DB
     const task = await Task.findById(taskId);
@@ -26,30 +41,32 @@ export const predictDeadline = async (req, res) => {
     // 2. Process Screenshots (Convert Buffer to Base64)
     let imageParts = [];
     if (task.screenshots && task.screenshots.length > 0) {
-      imageParts = task.screenshots.map((s) => {
-        try {
-          // If s.data is a Buffer (standard for Mongo Binary), convert to base64
-          const base64Data = Buffer.from(s.data).toString("base64");
-          return {
-            inlineData: {
-              data: base64Data,
-              mimeType: s.contentType || "image/png",
-            },
-          };
-        } catch (err) {
-          console.error("Error converting screenshot:", err);
-          return null;
-        }
-      }).filter(Boolean); // Remove failed conversions
+      imageParts = task.screenshots
+        .map((s) => {
+          try {
+            const base64Data = Buffer.from(s.data).toString("base64");
+            return {
+              inlineData: {
+                data: base64Data,
+                mimeType: s.contentType || "image/png",
+              },
+            };
+          } catch (err) {
+            console.error("Error converting screenshot:", err);
+            return null;
+          }
+        })
+        .filter(Boolean);
     }
 
-    console.log(`📸 Found ${imageParts.length} screenshots for analysis.`);
+    console.log(`📸 Found ${imageParts.length} screenshots.`);
 
-    // 3. Initialize Gemini Model (Use Flash for speed/availability)
+    // 3. Initialize Gemini Model
+    // ✅ CORRECT: This model supports images AND is now enabled on your account.
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // 4. Construct Prompt
-    const prompt = `
+    const promptText = `
       You are a Project Management AI.
       
       Task Details:
@@ -59,10 +76,10 @@ export const predictDeadline = async (req, res) => {
       - Priority: "${task.priority}"
       
       Instructions:
-      Analyze the attached screenshots (if any) which show the user's recent screen activity on this task.
+      Analyze the attached screenshots (if any) which show the user's recent screen activity.
       Based on the task details and visual progress:
       1. Estimate a realistic completion deadline (e.g., "2 days", "Today by 5 PM").
-      2. Write a brief progress report (max 2 sentences) describing what seems to be happening.
+      2. Write a brief progress report (max 2 sentences).
       
       Output exactly this JSON format:
       {
@@ -72,42 +89,37 @@ export const predictDeadline = async (req, res) => {
     `;
 
     // 5. Call Gemini API
-    // Note: If no images, we just send the text prompt.
-    const contentParts = [prompt, ...imageParts];
+    // ⚡ FIX: Wrap the text prompt in an object. Do not pass raw strings in the array.
+    const contentParts = [{ text: promptText }, ...imageParts];
+
+    console.log("🚀 Sending request to Gemini...");
     const result = await model.generateContent(contentParts);
     const response = await result.response;
     const text = response.text();
 
+    console.log("🤖 Gemini Raw Response:", text);
+
     // 6. Parse JSON Response
-    // Clean up markdown code blocks if Gemini adds them (e.g. ```json ... ```)
     const cleanText = text.replace(/```json|```/g, "").trim();
-    
+
     let prediction;
     try {
       prediction = JSON.parse(cleanText);
     } catch (e) {
-      // Fallback if Gemini returns raw text instead of JSON
-      console.error("Failed to parse JSON, using raw text", text);
+      console.error("Failed to parse JSON, using fallback.");
       prediction = {
-        deadline: "See report",
-        report: text.substring(0, 100) + "..."
+        deadline: "Review manually",
+        report: cleanText.substring(0, 150), // Fallback to raw text
       };
     }
 
     console.log("✅ Prediction success:", prediction);
     res.status(200).json(prediction);
-
   } catch (error) {
     console.error("🔥 Gemini Prediction Error:", error);
-    
-    // Check for specific Google API errors
-    if (error.message?.includes("User location is not supported")) {
-        return res.status(403).json({ message: "Gemini API is not available in your server's region." });
-    }
-
-    res.status(500).json({ 
-        message: "AI Analysis failed.", 
-        error: error.message 
+    res.status(500).json({
+      message: "AI Analysis failed.",
+      error: error.message,
     });
   }
 };
