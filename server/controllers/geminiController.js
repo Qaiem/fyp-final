@@ -13,7 +13,7 @@ if (process.env.GEMINI_API_KEY) {
 }
 console.log("---------------------------------------------------");
 
-// Initialize globally, but we will check validity inside the request
+// Initialize globally
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export const predictDeadline = async (req, res) => {
@@ -39,31 +39,36 @@ export const predictDeadline = async (req, res) => {
     }
 
     // 2. Process Screenshots (Convert Buffer to Base64)
-    let imageParts = [];
-    if (task.screenshots && task.screenshots.length > 0) {
-      imageParts = task.screenshots
-        .map((s) => {
-          try {
-            const base64Data = Buffer.from(s.data).toString("base64");
-            return {
-              inlineData: {
-                data: base64Data,
-                mimeType: s.contentType || "image/png",
-              },
-            };
-          } catch (err) {
-            console.error("Error converting screenshot:", err);
-            return null;
-          }
-        })
-        .filter(Boolean);
-    }
+    // ✅ FIX 1: Added 'const' declaration here
+    const imageParts = task.screenshots.map((s) => {
+      // Debug log
+      console.log(
+        `Processing image: ${s.contentType}, Size: ${
+          s.data ? s.data.length : 0
+        }`
+      );
+
+      const base64Data = Buffer.from(s.data).toString("base64");
+      return {
+        inlineData: {
+          data: base64Data,
+          // Fallback to png if contentType is undefined in DB
+          mimeType: s.contentType || "image/png",
+        },
+      };
+    });
 
     console.log(`📸 Found ${imageParts.length} screenshots.`);
 
     // 3. Initialize Gemini Model
-    // ✅ CORRECT: This model supports images AND is now enabled on your account.
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // ✅ FIX 2: Used 'getGenerativeModel' instead of 'getModel'
+    // ✅ FIX 3: Updated model to standard 'gemini-1.5-flash'
+    // 3. Initialize Gemini Model
+    const model = genAI.getGenerativeModel({
+      // ❌ OLD: model: "gemini-1.5-flash-001",
+      // ✅ NEW: Use the current recommended model for multimodal tasks
+      model: "gemini-2.5-flash",
+    });
 
     // 4. Construct Prompt
     const promptText = `
@@ -89,18 +94,12 @@ export const predictDeadline = async (req, res) => {
     `;
 
     // 5. Call Gemini API
-    // ⚡ FIX: Wrap the text prompt in an object. Do not pass raw strings in the array.
     const contentParts = [{ text: promptText }, ...imageParts];
 
     console.log("🚀 Sending request to Gemini...");
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: contentParts,
-        },
-      ],
-    });
+
+    // Simple array format is preferred by the SDK
+    const result = await model.generateContent(contentParts);
 
     const response = await result.response;
     const text = response.text();
@@ -117,7 +116,7 @@ export const predictDeadline = async (req, res) => {
       console.error("Failed to parse JSON, using fallback.");
       prediction = {
         deadline: "Review manually",
-        report: cleanText.substring(0, 150), // Fallback to raw text
+        report: cleanText.substring(0, 150),
       };
     }
 
