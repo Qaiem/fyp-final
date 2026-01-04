@@ -23,7 +23,7 @@ jobs:
 
       - name: Build and Push Backend Image
         run: |
-          docker build -t qaiem/fyp-server:latest ./backend
+          docker build -t qaiem/fyp-server:latest ./server
           docker push qaiem/fyp-server:latest
 
   # JOB 2: DEPLOY (Runs on your AWS EC2)
@@ -40,4 +40,4 @@ jobs:
           docker stop backend-container || true
           docker rm backend-container || true
           # We pass the secret here because this runs on your server
-          docker run -d -p 4000:4000 -e MONGO_URI='${{ secrets.MONGO_URI }}' --name backend-container qaiem/fyp-server:latest
+          docker run -d -p 8800:8800 -e MONGO_URI='${{ secrets.MONGO_URI }}' --name backend-container qaiem/fyp-server:latest

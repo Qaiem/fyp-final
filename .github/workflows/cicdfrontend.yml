@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "main" ]
     # Delete the paths section here too
-    
+
 jobs:
   # JOB 1: BUILD (Runs on GitHub's computers)
   build:
@@ -23,7 +23,7 @@ jobs:
       - name: Build and Push Frontend Image
         run: |
           # ⚠️ REPLACE 'qaiem/fyp-client' with your actual Frontend Repo Name from Docker Hub
-          docker build -t qaiem/fyp-client:latest ./frontend
+          docker build -t qaiem/fyp-client:latest ./client
           docker push qaiem/fyp-client:latest
 
   # JOB 2: DEPLOY (Runs on your AWS EC2)
