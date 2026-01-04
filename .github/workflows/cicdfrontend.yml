@@ -1,10 +1,11 @@
 name: Deploy Frontend
+
 on:
+  workflow_dispatch: # <--- ADDS THE MANUAL BUTTON
   push:
     branches: [ "main" ]
-    paths:
-      - 'frontend/**'  # Only runs when frontend folder changes
-
+    # Delete the paths section here too
+    
 jobs:
   # JOB 1: BUILD (Runs on GitHub's computers)
   build:

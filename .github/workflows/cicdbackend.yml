@@ -1,9 +1,11 @@
 name: Deploy Backend
+
 on:
+  workflow_dispatch: # <--- ADDS THE MANUAL BUTTON
   push:
     branches: [ "main" ]
-    paths:
-      - 'backend/**'
+    # paths:       <--- DELETE THESE 2 LINES TEMPORARILY
+    #  - 'backend/**'
 
 jobs:
   # JOB 1: BUILD (Runs on GitHub's computers)
