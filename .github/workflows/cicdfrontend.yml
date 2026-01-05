@@ -1,14 +1,13 @@
 name: Deploy Frontend
 
 on:
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
   push:
     branches: [ "main" ]
     paths:
-      - 'client/**' # Only runs if you change frontend code
+      - 'client/**'
 
 jobs:
-  # JOB 1: BUILD (Runs on GitHub's servers)
   build:
     runs-on: ubuntu-latest
     steps:
@@ -23,28 +22,19 @@ jobs:
 
       - name: Build and Push Frontend Image
         run: |
-          # We pass the Backend URL here so React "bakes" it into the code
           docker build \
             --build-arg VITE_API_URL=http://3.111.47.71:8800/api \
             -t qaiem/fyp-client:latest ./client
-          
           docker push qaiem/fyp-client:latest
 
-  # JOB 2: DEPLOY (Runs on your AWS EC2)
   deploy:
     needs: build
     runs-on: self-hosted
     steps:
-      - name: Pull Docker Image
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy Frontend
         run: |
-          docker pull qaiem/fyp-client:latest
-          
-      - name: Run Frontend Container
-        run: |
-          # Stop old container if running
-          docker stop frontend-container || true
-          docker rm frontend-container || true
-          
-          # Run new container
-          # Maps AWS Port 3000 -> Container Port 80 (Assumes Nginx)
-          docker run -d -p 3000:80 --name frontend-container qaiem/fyp-client:latest
+          docker-compose pull frontend
+          docker-compose up -d frontend

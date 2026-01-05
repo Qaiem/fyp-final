@@ -2,19 +2,19 @@ version: '3.9'
 
 services:
   backend:
-    build:
-      context: ./server   # folder containing your backend Dockerfile
+    image: qaiem/fyp-server:latest
     container_name: backend-container
     ports:
       - "8800:8800"
     env_file:
-      - ./server/.env    # your backend .env file containing MONGO_URI and GEMINI_API_KEY
-    depends_on:
-      - frontend
+      - ./server/.env  # This file will be created by the CI/CD
+    restart: always
 
   frontend:
-    build:
-      context: ./client  # folder containing your frontend Dockerfile
+    image: qaiem/fyp-client:latest
     container_name: frontend-container
     ports:
       - "3000:80"
+    depends_on:
+      - backend
+    restart: always
