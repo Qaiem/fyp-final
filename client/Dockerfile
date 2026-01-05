@@ -7,9 +7,9 @@ COPY . .
 
 # --- REQUIRED FIX START ---
 # Accept the URL from the GitHub Action
-ARG VITE_API_URL
+ARG VITE_APP_BASE_URL
 # Make it available to the React build process
-ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_APP_BASE_URL=$VITE_APP_BASE_URL
 # --- REQUIRED FIX END ---
 
 RUN npm run build
