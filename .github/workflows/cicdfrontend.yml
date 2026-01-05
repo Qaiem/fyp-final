@@ -36,5 +36,5 @@ jobs:
 
       - name: Deploy Frontend
         run: |
-          docker-compose pull frontend
-          docker-compose up -d frontend
+          docker compose pull
+          docker compose up -d
