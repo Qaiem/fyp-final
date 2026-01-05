@@ -32,10 +32,6 @@ jobs:
 
       - name: Create Env File and Run
         run: |
-          # 1. Ensure we are in the root directory (where docker-compose.yml is)
-          ls -R  # This helps you see if the file is there in the logs
-          
-          # 2. Create the .env file
           mkdir -p server
           echo "NODE_ENV=production" > server/.env
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> server/.env
@@ -43,6 +39,8 @@ jobs:
           echo "PORT=8800" >> server/.env
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> server/.env
           
-          # 3. Use -f to explicitly point to the compose file if it's acting up
-          docker compose -f docker-compose.yml pull backend
-          docker compose -f docker-compose.yml up -d backend
+          # This removes the old container before starting the new one
+          docker compose down
+          
+          docker compose pull backend
+          docker compose up -d backend
