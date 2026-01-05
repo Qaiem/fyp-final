@@ -20,24 +20,23 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Frontend Image
+      - name: Build and Push Frontend Docker Image
         run: |
           docker build \
-            --build-arg VITE_APP_BASE_URL=http://3.111.47.71:8800 \
+            --build-arg VITE_APP_BASE_URL=${{ secrets.VITE_APP_BASE_URL }} \
             -t qaiem/fyp-client:latest ./client
           docker push qaiem/fyp-client:latest
+
   deploy:
     needs: build
-    runs-on: self-hosted
+    runs-on: self-hosted  # <--- This ensures it runs on your EC2
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Deploy Frontend
         run: |
-          # 1. Check if the file is there
-          ls -R 
-          
-          # 2. Pull and start only the frontend service
-          docker compose -f docker-compose.yml pull frontend
-          docker compose -f docker-compose.yml up -d frontend
+          mkdir -p server
+          touch server/.env # Fixes the "file not found" crash
+          docker compose pull frontend
+          docker compose up -d frontend
