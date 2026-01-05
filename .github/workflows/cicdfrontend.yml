@@ -37,6 +37,10 @@ jobs:
       - name: Deploy Frontend
         run: |
           mkdir -p server
-          touch server/.env # Fixes the "file not found" crash
+          touch server/.env 
+          
+          # This line prevents the "Conflict" error in the future
+          docker compose down frontend
+          
           docker compose pull frontend
           docker compose up -d frontend
