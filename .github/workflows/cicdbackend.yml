@@ -32,6 +32,8 @@ jobs:
 
       - name: Create Env File and Run
         run: |
+          # 1. Clear any old versions of the server folder and recreate it
+          rm -rf server
           mkdir -p server
           echo "NODE_ENV=production" > server/.env
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> server/.env
