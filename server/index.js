@@ -34,8 +34,8 @@ app.use("/api", routes);
 app.use(routeNotFound);
 app.use(errorHandler);
 
-// app.listen(port, () => console.log(`Server listening on ${port}`));
+app.listen(port, () => console.log(`Server listening on ${port}`));
 // The "0.0.0.0" is CRITICAL for Docker/AWS
-app.listen(8800, "0.0.0.0", () => {
-  console.log("Backend server is running!");
-});
+// app.listen(8800, "0.0.0.0", () => {
+//   console.log("Backend server is running!");
+// });
