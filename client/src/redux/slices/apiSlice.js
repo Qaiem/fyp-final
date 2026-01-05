@@ -19,7 +19,8 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 // Use your hardcoded URL for debugging, but we can switch to env later
-const BASE_URL = "http://3.111.47.71:8800/api"; 
+// If VITE_API_URL exists (AWS), use it. Otherwise use localhost.
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8800/api"; 
 
 const baseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,

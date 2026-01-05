@@ -40,4 +40,4 @@ jobs:
           docker stop backend-container || true
           docker rm backend-container || true
           # We pass the secret here because this runs on your server
-          docker run -d -p 8800:8800 -e MONGO_URI='${{ secrets.MONGO_URI }}' --name backend-container qaiem/fyp-server:latest
+          docker run -d -p 8800:8800 -e MONGO_URI='${{ secrets.MONGO_URI }}' -e JWT_SECRET='${{ secrets.JWT_SECRET }}' --name backend-container qaiem/fyp-server:latest
