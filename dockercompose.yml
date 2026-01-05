@@ -1,0 +1,20 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./server   # folder containing your backend Dockerfile
+    container_name: backend-container
+    ports:
+      - "8800:8800"
+    env_file:
+      - ./server/.env    # your backend .env file containing MONGO_URI and GEMINI_API_KEY
+    depends_on:
+      - frontend
+
+  frontend:
+    build:
+      context: ./client  # folder containing your frontend Dockerfile
+    container_name: frontend-container
+    ports:
+      - "3000:80"
