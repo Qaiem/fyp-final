@@ -36,5 +36,9 @@ jobs:
 
       - name: Deploy Frontend
         run: |
-          docker compose pull
-          docker compose up -d
+          # 1. Check if the file is there
+          ls -R 
+          
+          # 2. Pull and start only the frontend service
+          docker compose -f docker-compose.yml pull frontend
+          docker compose -f docker-compose.yml up -d frontend

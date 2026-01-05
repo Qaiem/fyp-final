@@ -32,13 +32,17 @@ jobs:
 
       - name: Create Env File and Run
         run: |
+          # 1. Ensure we are in the root directory (where docker-compose.yml is)
+          ls -R  # This helps you see if the file is there in the logs
+          
+          # 2. Create the .env file
           mkdir -p server
-          # We map GitHub Secrets to the exact names your app expects
           echo "NODE_ENV=production" > server/.env
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> server/.env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> server/.env
           echo "PORT=8800" >> server/.env
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> server/.env
           
-          docker compose pull
-          docker compose up -d
+          # 3. Use -f to explicitly point to the compose file if it's acting up
+          docker compose -f docker-compose.yml pull backend
+          docker compose -f docker-compose.yml up -d backend
