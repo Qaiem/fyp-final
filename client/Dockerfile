@@ -16,6 +16,13 @@ RUN npm run build
 
 # Step 2: Serve with Nginx
 FROM nginx:alpine
+
+# ------------------------------------------------------
+# ⚠️ CRITICAL MISSING LINE ⚠️
+# This copies your custom config to replace the default one
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+# ------------------------------------------------------
+    
 COPY --from=build /app/dist /usr/share/nginx/html
 # NOTE: If you are using Create-React-App instead of Vite, change '/app/dist' to '/app/build'
 EXPOSE 80
